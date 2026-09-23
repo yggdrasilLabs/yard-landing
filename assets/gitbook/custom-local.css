@@ -66,3 +66,9 @@
 .book.color-theme-2 .markdown-section .tab { color: #9aa0b3; }
 .book.color-theme-2 .markdown-section .tab.active,
 .book.color-theme-2 .markdown-section .tab:hover { color: #7ab6ff; border-bottom-color: #7ab6ff; }
+
+/* Keep the code-block copy button out of text selections and copies. */
+.copy-code-button {
+    user-select: none;
+    -webkit-user-select: none;
+}

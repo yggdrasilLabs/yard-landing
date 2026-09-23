@@ -3,8 +3,7 @@
     "collection": "start",
     "pages": [
       "/docs/install/",
-      "/docs/quickstart/",
-      "/docs/examples/glue-spark-etl/"
+      "/docs/quickstart/"
     ]
   },
   {
