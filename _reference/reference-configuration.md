@@ -164,6 +164,11 @@ and shallow-overrides the root `yard.yaml` `aws:` block per-job.
 
 Defined by `JobDefinition` in `yard-structs/src/config.rs`.
 
+Only `type`, `plugin_version`, and `plugin_source` are required by yard
+itself. Which of the remaining fields a job uses, and whether a plugin needs
+fields not listed here, depends on the plugin: yard parses the fields below
+when present and passes the whole job through for the plugin to validate.
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` (→ `job_type`) | string | Yes | Plugin provider type, e.g. `glue`, `emr`. Resolves the plugin binary name as `yard-plugin-<type>`. |

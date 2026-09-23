@@ -187,9 +187,9 @@ providers:
 ### 2. Fill in the provider block
 
 Open `yard.yaml` and add a block under `providers:` keyed by your plugin's
-job type. The fields inside it are whatever the plugin documents; a plugin
-that uploads scripts will want a bucket, one that talks to a regional API
-will want a region, and so on.
+job type. The fields inside it are whatever the plugin documents. A Glue
+plugin wants a bucket for generated scripts and a region; an Airflow plugin
+wants the bucket its DAG files go to.
 
 ```yaml
 project: yard-tutorial
@@ -204,18 +204,46 @@ providers:
 ```
 
 Everything in this block is passed to the plugin with every job of that type,
-after being merged with any `config:` block in the job file. yard checks the
-block against the plugin's schema during `validate`, so a missing required
-field is reported before anything is deployed.
+after being merged with the `<type>:` block in the job file, if there is one.
+yard checks the block against the plugin's schema during `validate`, so a
+missing required field is reported before anything is deployed.
 
 ### 3. Add one job
 
-Create a file `orders.yaml` next to `yard.yaml`:
+Create a file `orders.yaml` next to `yard.yaml`. Three fields are yard's:
 
 ```yaml
 type: <type>
 plugin_version: "<version>"
 plugin_source: "<url>"
+```
+
+`type` selects the plugin. `plugin_version` and `plugin_source` are required
+on every job in v2.0: they tell yard which plugin release to download and from
+where. Write the full URL for your platform's asset; placeholder expansion
+inside job files is not available yet (see the
+[v2.0 migration guide]({% link _howto/reference-migrations-v2.0.md %})).
+
+Everything else in the file is defined by the plugin. yard passes it through
+and validates it against the schema the plugin reports, so the shape of a job
+depends entirely on which plugin it names. Two examples, using the Glue and
+Airflow plugins:
+
+<div class="tabs" data-tabs="lang">
+<div class="tab-list" role="tablist">
+<button type="button" role="tab" class="tab active" data-tab="glue-plugin" aria-selected="true">Glue plugin</button>
+<button type="button" role="tab" class="tab" data-tab="airflow-plugin" aria-selected="false">Airflow plugin</button>
+</div>
+<div class="tab-panel active" data-tab="glue-plugin" role="tabpanel" markdown="1">
+
+A Glue plugin describes a Spark job as sources, transforms, and a sink, and
+needs the IAM role the job runs as:
+
+```yaml
+type: glue
+plugin_version: "0.1.0"
+plugin_source: "https://<plugin-release-url>/yard-plugin-glue-0.1.0-aarch64-macos"
+role: arn:aws:iam::123456789012:role/GlueJobExecutionRole
 
 sources:
   - name: orders
@@ -234,17 +262,32 @@ sink:
   mode: overwrite
 ```
 
-`type` selects the plugin. `plugin_version` and `plugin_source` are required
-on every job in v2.0: they tell yard which plugin release to download and from
-where. Write the full URL for your platform's asset; placeholder expansion
-inside job files is not available yet (see the
-[v2.0 migration guide]({% link _howto/reference-migrations-v2.0.md %})).
+</div>
+<div class="tab-panel" data-tab="airflow-plugin" role="tabpanel" markdown="1">
 
-`sources`, `transforms`, and `sink` are yard's job model, documented in
-[configuration]({% link _reference/reference-configuration.md %}#jobyaml-individual-job-definitions).
-Which source and sink types a plugin supports, and any extra fields it needs
-on the job (an execution role, for example), come from the plugin's
-documentation. Replace the paths with real values in your account.
+An Airflow plugin describes a DAG instead: where the DAG file goes, when it
+runs, and its tasks. There are no sources or sinks.
+
+```yaml
+type: airflow
+plugin_version: "0.1.0"
+plugin_source: "https://<plugin-release-url>/yard-plugin-airflow-0.1.0-aarch64-macos"
+dags_bucket: my-airflow-dags
+
+schedule: "@daily"
+tasks:
+  - task_id: refresh_orders
+    task_type: bash
+    command: "echo refreshing orders"
+```
+
+</div>
+</div>
+
+Which fields your plugin expects, and what resources they refer to (the role
+and buckets above have to exist already), come from the plugin's
+documentation. Replace the placeholder values with real ones from your
+account.
 
 Your project directory now looks like:
 

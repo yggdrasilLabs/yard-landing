@@ -12,9 +12,9 @@ separate processes; yard itself creates nothing in your account.
 If you have used Terraform or Terragrunt, most of this will be familiar:
 declarative config, a plan and apply cycle, state that records what was
 deployed, and providers that live outside the core binary. The differences
-are that the config describes ETL jobs (sources, transforms, a sink) rather
-than cloud resources, and that directories carry context the way they do in
-Terragrunt, so account and region settings are written once and inherited.
+are that the config describes data jobs rather than cloud resources, and that
+directories carry context the way they do in Terragrunt, so account and
+region settings are written once and inherited.
 
 ## Install
 
@@ -26,15 +26,22 @@ to a deployed Glue job.
 
 ## Job files
 
-A job file says which plugin handles it, where the data comes from, what to do
-with it, and where it goes. Which account and region it deploys to, and the
-provider settings that go with them, come from the directory it sits in.
+A job file has three fields that belong to yard: `type`, which names the
+plugin, and `plugin_version` and `plugin_source`, which say which release of
+it to download. Everything else in the file is defined by the plugin, so a
+job's shape depends on what it targets. Which account and region it deploys
+to, and the provider settings that go with them, come from the directory it
+sits in.
+
+Here is a job for a Glue plugin, which describes a Spark job as sources,
+transforms, and a sink:
 
 ```yaml
 # aws/dev/us-east-1/orders.yaml
-type: <provider>           # the plugin's job type, e.g. glue
-plugin_version: "<version>"
-plugin_source: "<release URL of the plugin binary for your platform>"
+type: glue
+plugin_version: "0.1.0"
+plugin_source: "https://<plugin-release-url>/yard-plugin-glue-0.1.0-aarch64-macos"
+role: arn:aws:iam::123456789012:role/GlueJobExecutionRole
 
 sources:
   - name: orders
@@ -56,19 +63,17 @@ sink:
   mode: overwrite
 ```
 
+A job for an Airflow plugin would carry a schedule and a list of tasks
+instead, with no sources or sinks at all.
+
 yard merges the job with the context from its parent directories and sends
 the result to the plugin. The plugin turns it into whatever its target needs,
 typically a generated script that it uploads and a job it creates or updates.
 Anything the plugin needs beyond the job file, such as an execution role or a
 bucket for scripts, is listed in the plugin's documentation and has to exist
-before you apply.
-
-The built-in transforms are `sql`, `filter`, `select`, `rename`,
-`drop_columns`, `add_column`, `join`, `aggregate`, and `window`, plus
-`mask_pii` for redacting PII columns. If none of those fit, `body` appends
-your own Python to the generated script and `job_file` replaces it entirely.
-The [configuration reference]({% link _reference/reference-configuration.md %})
-lists every field.
+before you apply. The [configuration reference]({% link _reference/reference-configuration.md %})
+documents the fields yard itself parses, including the source, transform, and
+sink model that script-generating plugins use.
 
 ## Plan and apply
 
