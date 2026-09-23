@@ -1,0 +1,42 @@
+[
+  {
+    "collection": "start",
+    "pages": [
+      "/docs/install/",
+      "/docs/quickstart/",
+      "/docs/examples/glue-spark-etl/"
+    ]
+  },
+  {
+    "collection": "howto",
+    "pages": [
+      "/docs/how-to/cross-account-deploy/",
+      "/docs/how-to/upgrade-yard/",
+      "/docs/reference/migrations/v2.0/"
+    ]
+  },
+  {
+    "collection": "plugins",
+    "pages": [
+      "/docs/how-to/build-a-plugin/",
+      "/docs/plugins/example-plugins/",
+      "/docs/reference/providers/glue/",
+      "/docs/reference/providers/emr/"
+    ]
+  },
+  {
+    "collection": "reference",
+    "pages": [
+      "/docs/reference/cli/",
+      "/docs/reference/configuration/",
+      "/docs/explanation/architecture/"
+    ]
+  },
+  {
+    "collection": "contributing",
+    "pages": [
+      "/docs/contributing/development/",
+      "/docs/contributing/testing/"
+    ]
+  }
+]

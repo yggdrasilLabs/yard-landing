@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html lang="en" >
+    <head>
+        {%- include head.html -%}
+        {%- assign first_label = site.ordered_collections | first -%}
+        {%- assign first_doc = site[first_label] | sort: "order" | first -%}
+        {% if first_doc %}
+            <link rel="next" href="{{site.baseurl}}{{first_doc.url}}" />
+        {% endif %}
+    </head>
+    <body>
+        <div class="book">
+
+            {%- include toc-date.html -%}
+
+            <div class="book-body">
+                <div class="book-header" role="navigation">
+                    <h1>
+                        <i class="fa fa-circle-o-notch fa-spin"></i>
+                        {% if page.title %}
+                            <a href="." >{{ page.title | escape }}</a>
+                        {% else %}
+                            <a href="." >{{ site.title | escape }}</a>
+                        {% endif %}
+                    </h1>
+                </div>
+
+                <div class="body-inner">
+                    {%- include body.html -%}
+
+                    {% if first_doc %}
+                        <a href="{{site.baseurl}}{{first_doc.url}}" class="navigation navigation-next navigation-unique" aria-label="Next page: {{first_doc.title}}">
+                            <i class="fa fa-angle-right"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <script>
+            var gitbook = gitbook || [];
+            gitbook.push(function() {
+                gitbook.page.hasChanged({%- include metadata-home.json.tpl -%});
+            });
+            </script>
+        </div>
+
+        {%- include footer.html -%}
+
+    </body>
+</html>

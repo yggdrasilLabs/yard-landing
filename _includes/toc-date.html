@@ -1,0 +1,78 @@
+<div class="book-summary">
+    <script type="text/javascript">
+        // Fixes the page links scroll problem on both desktop and mobile browsers
+        function pageScrollToTop(element) {
+            $('div.body-inner').animate({scrollTop: 0});
+            $(element).parent().find('li>ul>li').removeClass('active');
+            return true;
+        }
+        // Fixes the anchor links scroll problem on mobile browsers
+        function mobilePageScrollToAnchor(element) {
+            $(element).closest('li.chapter').find('ul>li').removeClass('active');
+            $(element).parent().addClass('active');
+            if ($(document).width() <= 1240) {
+                let target = $($(element).attr('href'));
+                if (target.length) {
+                    $('div.body-inner').animate({
+                        scrollTop: target.get(0).offsetTop,
+                    });
+                }
+            }
+            return true;
+        }
+    </script>
+
+    <nav role="navigation">
+        <div id="book-search-input" role="search">
+            <input type="text" placeholder="Type to search" />
+        </div>
+        <div id="book-search-input-link" role="search">
+            <a href="{{site.baseurl}}/assets/search.html">Click to Search</a>
+        </div>
+        <ul class="summary">
+            {% if page.url == "/index.html" or page.url == "/" %}
+            <li class="chapter active" data-level="1.1" data-path="{{site.baseurl}}">
+            {% else %}
+            <li class="chapter" data-level="1.1" data-path="{{site.baseurl}}">
+            {% endif %}
+                <a href="{{site.baseurl}}/" onclick="pageScrollToTop(this)">
+                    {{ site.home_title | default: site.title | escape }}
+                </a>
+            </li>
+
+            {% for label in site.ordered_collections %}
+                {% assign collection = site.collections | where: "label", label | first %}
+                {% if collection.output %}
+                    {% assign docs = site[collection.label] | sort: "order" %}
+                    {% if docs.size > 0 %}
+                        <li class="divider"></li>
+                        {% if collection.title %}
+                        <li class="header">{{ collection.title | escape }}</li>
+                        {% endif %}
+                        {% for doc in docs %}
+                            {% if page.url == doc.url %}
+                            <li class="chapter active" data-level="1.2" data-path="{{site.baseurl}}{{doc.url}}">
+                            {% else %}
+                            <li class="chapter" data-level="1.1" data-path="{{site.baseurl}}{{doc.url}}">
+                            {% endif %}
+                                <a href="{{site.baseurl}}{{doc.url}}" onclick="pageScrollToTop(this)">
+                                    {{ doc.title | escape }}
+                                </a>
+                                {% if site.toc.enabled and page.url == doc.url %}
+                                    {% include toc.html html=content h_min=site.toc.h_min h_max=site.toc.h_max %}
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            <li class="divider"></li>
+            {% for link in site.sidebar_links %}
+            <li class="chapter" data-level="1.1" data-path="{{ link.url }}">
+                <a href="{{ link.url }}" target="_blank" rel="noopener">{{ link.title | escape }} <i class="fa fa-external-link" aria-hidden="true"></i></a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+</div>

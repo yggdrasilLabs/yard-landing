@@ -1,0 +1,103 @@
+# ----
+# Site
+
+title:            yard
+longtitle:        yard — declarative infrastructure for data pipelines
+home_title:       Overview
+author:           Sean McAuliffe
+description: >-
+  Define ETL jobs in YAML and deploy them through provider plugins for AWS Glue
+  and Airflow. Terragrunt-style hierarchical config with a plan/apply lifecycle.
+
+url:              "https://yggdrasillabs.github.io"
+baseurl:          "/yard-landing"
+
+# Project links used across the site
+github_url:       https://github.com/sean-mca/yard
+plugins_url:      https://github.com/sean-mca/yard-plugins
+releases_url:     https://github.com/sean-mca/yard/releases
+
+# External links shown at the bottom of the sidebar
+sidebar_links:
+  - title: GitHub
+    url: https://github.com/sean-mca/yard
+  - title: Releases
+    url: https://github.com/sean-mca/yard/releases
+  - title: yard-plugins
+    url: https://github.com/sean-mca/yard-plugins
+
+# -----
+# Theme (jekyll-gitbook, vendored in _layouts, _includes and assets/gitbook)
+
+gitbook_version:  3.2.3
+favicon_path:     /assets/gitbook/images/favicon.ico
+page_width:       860px
+syntax_highlighter_style: github
+
+toc:
+  enabled: true
+  h_min:   2
+  h_max:   3
+
+# -----
+# Build
+
+timezone: Etc/UTC
+
+markdown: kramdown
+kramdown:
+  auto_ids:           true
+  input:              GFM
+  hard_wrap:          false
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    guess_lang: false
+
+# Each docs section is a collection. Order within a section comes from the
+# `order` front matter that scripts/sync-docs.py writes from scripts/docs-nav.json.
+collections:
+  start:
+    output: true
+    title: Getting started
+    sort_by: order
+  howto:
+    output: true
+    title: How-to
+    sort_by: order
+  plugins:
+    output: true
+    title: Writing plugins
+    sort_by: order
+  reference:
+    output: true
+    title: Reference
+    sort_by: order
+  contributing:
+    output: true
+    title: Contributing
+    sort_by: order
+
+ordered_collections:
+  - start
+  - howto
+  - plugins
+  - reference
+  - contributing
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: post
+
+plugins:
+  - jekyll-sitemap
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - LICENSE-jekyll-gitbook
+  - vendor
+  - scripts
+  - docs-site

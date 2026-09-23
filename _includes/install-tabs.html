@@ -1,0 +1,38 @@
+<div class="tabs" data-tabs="install">
+<div class="tab-list" role="tablist">
+<button type="button" role="tab" class="tab active" data-tab="brew" aria-selected="true">Homebrew</button>
+<button type="button" role="tab" class="tab" data-tab="source" aria-selected="false">Build from source</button>
+</div>
+<div class="tab-panel active" data-tab="brew" role="tabpanel" markdown="1">
+
+Works on macOS and Linux with [Homebrew](https://brew.sh) installed.
+
+```bash
+brew install sean-mca/yard/yard
+yard --version
+```
+
+To pick up a new release later:
+
+```bash
+brew upgrade yard
+```
+
+</div>
+<div class="tab-panel" data-tab="source" role="tabpanel" markdown="1">
+
+Requires Rust 1.85 or newer. Install it with [rustup](https://rustup.rs) if you don't have it.
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+git clone https://github.com/sean-mca/yard.git
+cd yard
+cargo build --release
+export PATH="$PWD/target/release:$PATH"
+yard --version
+```
+
+The binary is at `target/release/yard`. Copy it somewhere on your `PATH` to keep it after you leave the checkout.
+
+</div>
+</div>

@@ -1,0 +1,68 @@
+/* Site-specific additions on top of the jekyll-gitbook theme. */
+
+.book-summary ul.summary li.header {
+    font-size: 0.8em;
+    letter-spacing: 0.05em;
+}
+
+.book-summary ul.summary li.chapter a .fa-external-link {
+    font-size: 0.8em;
+    margin-left: 4px;
+    opacity: 0.6;
+}
+
+/* Tabbed examples (see scripts/sync-docs.py for the markdown convention). */
+
+.markdown-section .tabs {
+    margin: 0 0 1.275em 0;
+}
+
+.markdown-section .tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 2px solid #e5e5e5;
+    margin-bottom: 0.85em;
+}
+
+.markdown-section .tab {
+    appearance: none;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    margin: 0 0 -2px 0;
+    padding: 8px 16px;
+    font: inherit;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #777;
+    cursor: pointer;
+}
+
+.markdown-section .tab:hover {
+    color: #4183c4;
+}
+
+.markdown-section .tab.active {
+    color: #4183c4;
+    border-bottom-color: #4183c4;
+}
+
+.markdown-section .tab-panel {
+    display: none;
+}
+
+.markdown-section .tab-panel.active {
+    display: block;
+}
+
+.markdown-section .tab-panel > :last-child {
+    margin-bottom: 0;
+}
+
+/* Dark and sepia themes */
+
+.book.color-theme-1 .markdown-section .tab-list { border-bottom-color: #e0d3b3; }
+.book.color-theme-2 .markdown-section .tab-list { border-bottom-color: #3b3f52; }
+.book.color-theme-2 .markdown-section .tab { color: #9aa0b3; }
+.book.color-theme-2 .markdown-section .tab.active,
+.book.color-theme-2 .markdown-section .tab:hover { color: #7ab6ff; border-bottom-color: #7ab6ff; }
