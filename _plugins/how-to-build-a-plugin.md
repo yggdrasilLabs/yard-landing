@@ -10,8 +10,8 @@ This guide is for developers building provider plugins for yard. A plugin is a s
 
 Part 1 walks through a minimal plugin in two languages side by side:
 
-- **Rust**, using the `yard-plugin-sdk` crate, which handles the protocol mechanics so you implement business logic only. The Glue plugin is built this way.
-- **Python**, implementing the protocol directly with the standard library. The Airflow plugin is built this way, and it shows that no SDK is required.
+- **Rust**, using the `yard-plugin-sdk` crate, which handles the protocol mechanics so you implement business logic only.
+- **Python**, implementing the protocol directly with the standard library, which shows that no SDK is required.
 
 Part 2 is the raw protocol spec, for building a plugin in any other language.
 
@@ -52,7 +52,7 @@ chmod +x yard-plugin-example.py
 
 There is no Python SDK; the protocol is small enough to implement with `json` and `sys`. The single script is the plugin executable, so it must start with a `#!/usr/bin/env python3` line.
 
-If your plugin needs third-party packages (the Airflow plugin uses `jinja2` and `boto3`), they must be installed for whichever `python3` is on the user's `PATH`. Keep dependencies minimal and document them.
+If your plugin needs third-party packages (a templating library, a cloud SDK), they must be installed for whichever `python3` is on the user's `PATH`. Keep dependencies minimal and document them, along with any credentials, roles, or other resources your plugin expects the user to provide.
 
 </div>
 </div>
@@ -494,7 +494,7 @@ to match, or your users' first `yard plan` will 404.
 > URL for the platform you are on:
 >
 > ```yaml
-> plugin_source: "https://github.com/sean-mca/yard-plugins/releases/download/v0.1.0/yard-plugin-glue-0.1.0-aarch64-apple-darwin"
+> plugin_source: "https://<plugin-release-url>/yard-plugin-glue-0.1.0-aarch64-macos"
 > ```
 >
 > The placeholder expansion itself works correctly once a template reaches the

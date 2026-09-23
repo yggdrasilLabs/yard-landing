@@ -19,5 +19,5 @@ Download the one for your platform, make it executable, and put it on your
 
 ## Next steps
 
-- The [quickstart]({% link _start/quickstart.md %}) walks from an empty directory to a deployed Glue job.
+- The [quickstart]({% link _start/quickstart.md %}) walks from an empty directory to a first deployed job.
 - [Upgrade yard]({% link _howto/how-to-upgrade-yard.md %}) covers moving between versions and the migration guides.

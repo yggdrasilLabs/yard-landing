@@ -6,15 +6,14 @@ longtitle:        yard — declarative infrastructure for data pipelines
 home_title:       Overview
 author:           Sean McAuliffe
 description: >-
-  Define ETL jobs in YAML and deploy them through provider plugins for AWS Glue
-  and Airflow. Terragrunt-style hierarchical config with a plan/apply lifecycle.
+  Define ETL jobs in YAML and deploy them through provider plugins.
+  Terragrunt-style hierarchical config with a plan/apply lifecycle.
 
 url:              "https://yggdrasillabs.github.io"
 baseurl:          "/yard-landing"
 
 # Project links used across the site
 github_url:       https://github.com/sean-mca/yard
-plugins_url:      https://github.com/sean-mca/yard-plugins
 releases_url:     https://github.com/sean-mca/yard/releases
 
 # External links shown at the bottom of the sidebar
@@ -23,8 +22,6 @@ sidebar_links:
     url: https://github.com/sean-mca/yard
   - title: Releases
     url: https://github.com/sean-mca/yard/releases
-  - title: yard-plugins
-    url: https://github.com/sean-mca/yard-plugins
 
 # -----
 # Theme (jekyll-gitbook, vendored in _layouts, _includes and assets/gitbook)

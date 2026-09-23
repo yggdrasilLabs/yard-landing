@@ -6,9 +6,14 @@ order: 2
 source: "https://github.com/sean-mca/yard/blob/main/docs/quickstart.md"
 ---
 
-This guide walks you from zero to a deployed AWS Glue job managed by yard. It
-covers prerequisites, installing yard, scaffolding a project, authoring one
-job, and running `yard plan` / `yard apply` to deploy it.
+This guide goes from nothing to a first `yard apply`. It covers installing
+yard, scaffolding a project, writing one job file, and running
+`yard validate`, `yard plan`, and `yard apply`.
+
+yard itself does not create anything in a cloud account. Every job names a
+provider plugin, and the plugin does the deploying. This guide is written for
+any provider; wherever the plugin decides what happens, it says so and points
+you at the plugin's documentation.
 
 If you just want to skim, the shortest possible path is:
 
@@ -26,6 +31,37 @@ The rest of this document explains each step.
 ---
 
 ## Prerequisites
+
+### A provider plugin
+
+Decide which provider you are deploying to and find its plugin. From the
+plugin's documentation you need three things:
+
+- **A release to point at.** Each job file carries `plugin_version` and
+  `plugin_source`, the URL yard downloads the plugin binary from. Plugins
+  publish one binary per platform, so pick the asset for the machine yard
+  runs on.
+- **The config it accepts.** The block under `providers.<type>` in
+  `yard.yaml`, and any provider-specific fields in job files, are defined by
+  the plugin. yard validates them against the schema the plugin reports and
+  passes them through.
+- **The resources it needs.** A plugin typically needs credentials with
+  specific permissions, and often things like an IAM role, a bucket for
+  generated scripts, or a cluster to submit to. yard does not create any of
+  these. Set them up before `yard apply`, following the plugin's docs.
+
+### Credentials
+
+Plugins run as child processes of yard and inherit its environment, so
+credentials exported in your shell, a named profile, an instance role, or an
+SSO session are all visible to them. What permissions a plugin needs is in
+its documentation.
+
+yard uses AWS credentials itself only for the S3 state backend, through the
+standard AWS SDK default chain. For cross-account setups yard also reads
+`YARD_AWS_ASSUME_ROLE`, `YARD_AWS_SESSION_NAME`, and `YARD_AWS_EXTERNAL_ID`
+(passed on to plugins) and `YARD_STATE_AWS_*` (state bucket only). See
+[configuration]({% link _reference/reference-configuration.md %}#yard-cli-environment-variables).
 
 ### Rust toolchain (source builds only)
 
@@ -49,57 +85,6 @@ Verify:
 ```bash
 cargo --version   # cargo 1.85 or newer
 rustc --version   # rustc 1.85 or newer
-```
-
-### AWS credentials (for the `glue` and `emr` providers)
-
-yard does not ship its own credential manager — it uses the standard AWS SDK
-default credential chain (env vars → `~/.aws/credentials` → IMDS → SSO). Any
-one of these works:
-
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` exported
-  in your shell.
-- `aws configure --profile <name>` followed by `export AWS_PROFILE=<name>`.
-- An EC2 / ECS / Lambda instance role.
-- `aws sso login` against a configured SSO profile.
-
-Verify credentials resolve:
-
-```bash
-aws sts get-caller-identity
-```
-
-Your caller identity needs permission to:
-
-- **S3:** `PutObject`, `GetObject`, `DeleteObject`, `HeadBucket`, `ListBucket`
-  on the script bucket and (if used) the state bucket.
-- **Glue:** `CreateJob`, `UpdateJob`, `DeleteJob`, `GetJob`, `StartJobRun`,
-  and `PassRole` for the Glue execution role referenced in each job file.
-- **EMR** (only if using the EMR provider): `AddJobFlowSteps`,
-  `DescribeStep`, `CancelSteps` on the target cluster.
-
-If you plan to use AssumeRole (for cross-account deploys), yard also reads
-`YARD_AWS_ASSUME_ROLE`, `YARD_AWS_SESSION_NAME`, and `YARD_AWS_EXTERNAL_ID`
-env vars — see [configuration]({% link _reference/reference-configuration.md %}#yard-cli-environment-variables).
-
-### S3 bucket(s)
-
-You need at least one S3 bucket that yard can write generated PySpark scripts
-to. This is the `providers.glue.script_bucket` (or
-`providers.emr.script_bucket`) in `yard.yaml`. The bucket must exist before
-you run `yard apply` — yard does not create it for you.
-
-If you also want to use the S3 state backend (recommended for anything beyond
-a single-developer prototype), you need a second bucket for state. Local
-state is fine for getting started.
-
-### AWS CLI (optional but useful)
-
-Not required by yard, but handy for verifying the resources yard creates. Any
-recent v2 release works:
-
-```bash
-aws --version
 ```
 
 ---
@@ -165,7 +150,11 @@ flag surface.
 
 ## Your first job — a minimal tutorial
 
-We will create a one-job project that filters an S3 dataset with Glue.
+We will create a one-job project that reads a dataset, filters it, and writes
+the result. In the snippets below, `<type>` stands for your provider plugin's
+job type (the name the plugin registers under, such as `glue` for a Glue
+plugin) and `<version>` and `<url>` for the release you picked in
+[Prerequisites](#a-provider-plugin).
 
 ### 1. Scaffold the project
 
@@ -195,11 +184,12 @@ state:
 providers:
 ```
 
-### 2. Fill in the Glue provider block
+### 2. Fill in the provider block
 
-Open `yard.yaml` and add a `glue:` key under `providers:` pointing at the S3
-bucket where yard should upload generated scripts. Replace the placeholder
-values with your own bucket and region:
+Open `yard.yaml` and add a block under `providers:` keyed by your plugin's
+job type. The fields inside it are whatever the plugin documents; a plugin
+that uploads scripts will want a bucket, one that talks to a regional API
+will want a region, and so on.
 
 ```yaml
 project: yard-tutorial
@@ -209,27 +199,23 @@ state:
   path: .yard/state
 
 providers:
-  glue:
-    script_bucket: my-yard-scripts-bucket
-    region: us-east-1
+  <type>:
+    # fields defined by the plugin -- see its documentation
 ```
 
-Since v2.0 the fields under `providers.glue` are defined by the Glue plugin,
-not by yard — see [`providers.<type>`]({% link _reference/reference-configuration.md %}#providerstype--provider-defaults)
-and the [yard-plugins](https://github.com/sean-mca/yard-plugins) repository for
-the full list (worker type, Glue version, bookmarks, connections, etc.). The
-plugin's defaults (`script_prefix: yard-scripts/`, `glue_version: 4.0`,
-`worker_type: G.1X`, `number_of_workers: 2`) are fine for this tutorial.
+Everything in this block is passed to the plugin with every job of that type,
+after being merged with any `config:` block in the job file. yard checks the
+block against the plugin's schema during `validate`, so a missing required
+field is reported before anything is deployed.
 
 ### 3. Add one job
 
 Create a file `orders.yaml` next to `yard.yaml`:
 
 ```yaml
-type: glue
-plugin_version: "0.1.0"
-plugin_source: "https://github.com/sean-mca/yard-plugins/releases/download/v0.1.0/yard-plugin-glue-0.1.0-aarch64-apple-darwin"
-role: arn:aws:iam::123456789012:role/GlueJobExecutionRole
+type: <type>
+plugin_version: "<version>"
+plugin_source: "<url>"
 
 sources:
   - name: orders
@@ -248,17 +234,17 @@ sink:
   mode: overwrite
 ```
 
-`type: glue` selects the Glue provider plugin. `plugin_version` and
-`plugin_source` are required on every job in v2.0: they tell yard which plugin
-release to download and from where. Pick the release asset for your platform
-(`aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`,
-or `aarch64-unknown-linux-gnu`) from the
-[yard-plugins releases](https://github.com/sean-mca/yard-plugins/releases).
+`type` selects the plugin. `plugin_version` and `plugin_source` are required
+on every job in v2.0: they tell yard which plugin release to download and from
+where. Write the full URL for your platform's asset; placeholder expansion
+inside job files is not available yet (see the
+[v2.0 migration guide]({% link _howto/reference-migrations-v2.0.md %})).
 
-Replace the `role` ARN, the `sources[0].path`, and the `sink.path` with real
-values in your account. The `role` is the IAM role Glue assumes when running
-the job — it must be able to read from the source path and write to the sink
-path.
+`sources`, `transforms`, and `sink` are yard's job model, documented in
+[configuration]({% link _reference/reference-configuration.md %}#jobyaml-individual-job-definitions).
+Which source and sink types a plugin supports, and any extra fields it needs
+on the job (an execution role, for example), come from the plugin's
+documentation. Replace the paths with real values in your account.
 
 Your project directory now looks like:
 
@@ -293,10 +279,11 @@ Validating project: yard-tutorial
 Validation complete: 1 passed, 0 failed
 ```
 
-If you mistyped a field (e.g. `type: gluue`), `yard validate` will print the
-offending file, the field path, and an actionable error. Fix the job file and
-re-run. Validation also runs implicitly before `plan` and `apply`, but it is
-faster to iterate on.
+If you mistyped a field, `yard validate` will print the offending file, the
+field path, and an actionable error. Errors about provider-specific fields
+come from the plugin's `validate` operation and read the same way. Fix the job
+file and re-run. Validation also runs implicitly before `plan` and `apply`,
+but it is faster to iterate on.
 
 ### 5. Plan the change
 
@@ -307,7 +294,7 @@ yard plan
 Expected output for a first run:
 
 ```
-Downloading yard-plugin-glue v0.1.0...
+Downloading yard-plugin-<type> v<version>...
 Done.
 
 --- Plan for yard-tutorial ---
@@ -315,7 +302,7 @@ Done.
   + Create job [orders]
 ```
 
-The first `plan` downloads the Glue plugin binary declared in `orders.yaml`,
+The first `plan` downloads the plugin binary declared in `orders.yaml`,
 caches it under `.yard/plugins/`, and records its SHA-256 checksum in
 `yard.lock` at the project root. Commit `yard.lock`; later runs verify the
 cached binary against it and never re-download unless `plugin_version`
@@ -326,15 +313,16 @@ create it on apply. Subsequent runs after an `apply` show `No changes`
 until you edit `orders.yaml`, at which point a `~ Modify` line appears with
 the changed field names.
 
-You can inspect the PySpark script the plugin generated, without deploying
+You can inspect what the plugin generated for the job, without deploying
 anything:
 
 ```bash
 yard show orders
 ```
 
-This asks the plugin for its `codegen` output and prints the Python to stdout. Pipe it to a file if you want to
-review it (`yard show orders > orders.py`).
+This asks the plugin for its `codegen` output and prints it to stdout. For a
+plugin that generates scripts this is the script; pipe it to a file if you
+want to review it (`yard show orders > orders.py`).
 
 ### 6. Apply
 
@@ -349,15 +337,10 @@ Do you want to apply these changes? (y/n)
 ```
 
 Type `y` (or re-run with `--auto-approve` to skip the prompt). yard takes a
-lock on the `orders` job and hands the generated script to the Glue plugin,
-which:
-
-1. Uploads it to `s3://my-yard-scripts-bucket/yard-scripts/orders.py`
-   (bucket + prefix from your `providers.glue` config).
-2. Calls `glue:CreateJob` to create the Glue job named `orders`.
-
-yard then records the resources the plugin reported in
-`.yard/state/orders.json` and releases the lock.
+lock on the `orders` job, hands the generated artifact and the merged config
+to the plugin's `deploy` operation, and waits. The plugin creates or updates
+whatever its target is and reports back the resources it made. yard records
+those in `.yard/state/orders.json` and releases the lock.
 
 Expected output:
 
@@ -372,28 +355,7 @@ That's a complete deploy.
 
 ---
 
-## Verifying the job ran
-
-`yard apply` creates the Glue job definition but does not execute a run — you
-still control when the job runs. Verify the deploy landed in AWS:
-
-### Check the Glue job exists
-
-```bash
-aws glue get-job --job-name orders --region us-east-1
-```
-
-You should see a `Job` payload with `Role`, `Command.ScriptLocation` pointing
-at your `s3://…/yard-scripts/orders.py`, and the default `GlueVersion`,
-`WorkerType`, and `NumberOfWorkers` from your `providers.glue` block.
-
-### Check the uploaded script
-
-```bash
-aws s3 ls s3://my-yard-scripts-bucket/yard-scripts/
-```
-
-You should see `orders.py` with a recent timestamp.
+## After the apply
 
 ### Check yard's state
 
@@ -402,39 +364,41 @@ cat .yard/state/orders.json
 ```
 
 This is the per-job state file. It contains a `config_hash` (BLAKE3 of the
-script + merged config), the `resources` list the plugin created, the plugin
-version and source used, the applied timestamp, and the full merged config.
+generated artifact + merged config), the `resources` list the plugin
+reported, the plugin version and source used, the applied timestamp, and the
+full merged config.
 
-### Run the job (optional)
+### Check the deployed resource
 
-If you actually want Glue to execute the job:
+The `resources` list in the state file names what the plugin created, with a
+type and an id. Verify it with your provider's own tooling; the plugin's
+documentation says what to look for.
+
+`yard apply` deploys the job definition but does not run it. Running it, and
+watching it run, is done with the provider's tooling as well. yard's
+responsibility ends at the deploy.
+
+### Make a change
+
+Edit `orders.yaml`, then run `yard plan` again. The plan shows a `~ Modify`
+line naming what changed, because the artifact and config hash no longer
+match the state file. `yard apply` sends the new artifact to the plugin.
+
+### Tear it down
 
 ```bash
-aws glue start-job-run --job-name orders --region us-east-1
+yard destroy orders
 ```
 
-Then watch the run:
-
-```bash
-aws glue get-job-runs --job-name orders --region us-east-1 --max-items 1
-```
-
-Running the job exercises the PySpark script the Glue plugin generated
-against your real data, not yard itself. yard's responsibility ends at the
-deploy.
+yard passes the recorded resources to the plugin's `destroy` operation and
+removes the state file once it succeeds. `--auto-approve` and `--dry-run`
+work here too.
 
 ---
 
 ## Common setup issues
 
-**`aws sts get-caller-identity` fails with "Unable to locate credentials."**
-
-The AWS SDK default chain could not find credentials. Run `aws configure`
-to set up `~/.aws/credentials`, or `export AWS_ACCESS_KEY_ID=…` directly,
-or `aws sso login` against an SSO profile. Verify with
-`aws sts get-caller-identity` before re-running yard.
-
-**`yard plan` fails with `provider 'glue' is now a plugin -- add plugin_version and plugin_source`.**
+**`yard plan` fails with `provider '<type>' is now a plugin -- add plugin_version and plugin_source`.**
 
 The job file is missing the two plugin fields that v2.0 requires. Add
 `plugin_version` and `plugin_source` as shown in step 3; see the
@@ -448,23 +412,19 @@ version and the platform suffix. A checksum mismatch means the cached binary
 differs from what `yard.lock` recorded; delete the entry from `yard.lock` only
 if you expect the binary to have changed.
 
-**`yard apply` fails with `providers.glue.script_bucket is required`.**
+**`yard validate` reports a missing provider field.**
 
-You skipped step 2 — add a `glue:` block with a `script_bucket` under
-`providers:` in `yard.yaml`.
+The plugin's schema marks a field under `providers.<type>` (or on the job) as
+required and it is not set. Step 2 covers the `providers:` block; the plugin's
+documentation says what goes in it.
 
-**`yard apply` fails with `Job "orders" requires a "role"`.**
+**The plugin fails during `apply` with a credentials or permissions error.**
 
-The job file needs a top-level `role:` field naming the IAM role Glue should
-assume. This must be an ARN, not just a role name
-(`arn:aws:iam::ACCOUNT:role/ROLE_NAME`).
-
-**`yard apply` fails with `Failed to reach S3 bucket … in …`.**
-
-The script bucket doesn't exist, is in a different region, or your
-credentials can't see it. Create it first
-(`aws s3 mb s3://my-yard-scripts-bucket --region us-east-1`), or update
-`providers.glue.region` to match where the bucket actually lives.
+The plugin could not reach its target with the credentials in your
+environment. Check that credentials resolve in the shell you run yard from,
+and compare the permissions against the list in the plugin's documentation.
+Resources the plugin expects to exist already, such as a bucket or a role,
+must be created by you.
 
 **`cargo build --release` fails with an edition / toolchain error (source builds).**
 

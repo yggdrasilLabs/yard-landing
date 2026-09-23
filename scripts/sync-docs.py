@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate this site's documentation collections from the yard docs tree.
 
-Reads markdown from a sibling checkout of the yard repository (and the
-yard-plugins README), adds Jekyll front matter, and rewrites relative markdown
+Reads markdown from a sibling checkout of the yard repository, adds Jekyll
+front matter, and rewrites relative markdown
 links so they resolve on the published site. Links that point outside the docs
 tree become links to the file on GitHub. Pages under `docs-site/` are site-owned
 and copied in as they are.
@@ -11,7 +11,7 @@ and copied in as they are.
 permalink) and its order in the sidebar. Pages not listed there are skipped.
 
 Usage:
-    scripts/sync-docs.py [--yard ../yard] [--plugins ../yard-plugins]
+    scripts/sync-docs.py [--yard ../yard]
 """
 import argparse
 import json
@@ -25,7 +25,6 @@ SITE = os.path.dirname(HERE)
 NAV_FILE = os.path.join(HERE, "docs-nav.json")
 
 YARD_REPO = "https://github.com/sean-mca/yard"
-PLUGINS_REPO = "https://github.com/sean-mca/yard-plugins"
 
 LINK_RE = re.compile(r"(!?)\[([^\]]*)\]\(([^)\s]+)(\s+\"[^\"]*\")?\)")
 H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.M)
@@ -236,7 +235,6 @@ def copy_local(src_path, site):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--yard", default=os.path.join(SITE, "..", "yard"))
-    ap.add_argument("--plugins", default=os.path.join(SITE, "..", "yard-plugins"))
     args = ap.parse_args()
 
     docs_root = os.path.abspath(os.path.join(args.yard, "docs"))
@@ -260,7 +258,6 @@ def main():
                 sources.append((src, os.path.relpath(src, docs_root)))
     for _, doc_rel in sources:
         site.place(permalink_for(doc_rel))
-    site.place("/docs/plugins/example-plugins/")
     local_dir = os.path.join(SITE, "docs-site")
     local_pages = []
     if os.path.isdir(local_dir):
@@ -283,17 +280,6 @@ def main():
                       "%s/blob/main/docs/%s" % (YARD_REPO, doc_rel), site)
         if out:
             written.append(out)
-
-    plugins_readme = os.path.join(args.plugins, "README.md")
-    if os.path.isfile(plugins_readme):
-        out = convert(plugins_readme, "plugins/example-plugins.md",
-                      os.path.dirname(os.path.abspath(plugins_readme)), PLUGINS_REPO,
-                      "%s/blob/main/README.md" % PLUGINS_REPO, site,
-                      title_override="Example plugins")
-        if out:
-            written.append(out)
-    else:
-        print("warning: %s not found, skipping" % plugins_readme, file=sys.stderr)
 
     for src in local_pages:
         out = copy_local(src, site)

@@ -6,8 +6,8 @@ permalink: /
 
 yard is a command-line tool for deploying data pipelines from YAML. You write
 one file per job, run `yard plan` to see what would change, and `yard apply`
-to make the change. Providers such as AWS Glue and Airflow are plugins that
-yard downloads and runs as separate processes.
+to make the change. Providers are plugins that yard downloads and runs as
+separate processes; yard itself creates nothing in your account.
 
 If you have used Terraform or Terragrunt, most of this will be familiar:
 declarative config, a plan and apply cycle, state that records what was
@@ -27,15 +27,14 @@ to a deployed Glue job.
 ## Job files
 
 A job file says which plugin handles it, where the data comes from, what to do
-with it, and where it goes. Which account and region it deploys to, and which
-bucket the script lands in, come from the directory it sits in.
+with it, and where it goes. Which account and region it deploys to, and the
+provider settings that go with them, come from the directory it sits in.
 
 ```yaml
 # aws/dev/us-east-1/orders.yaml
-type: glue
-plugin_version: "0.1.0"
-plugin_source: "https://github.com/sean-mca/yard-plugins/releases/download/v0.1.0/yard-plugin-glue-0.1.0-aarch64-apple-darwin"
-role: arn:aws:iam::123456789012:role/GlueJobExecutionRole
+type: <provider>           # the plugin's job type, e.g. glue
+plugin_version: "<version>"
+plugin_source: "<release URL of the plugin binary for your platform>"
 
 sources:
   - name: orders
@@ -58,8 +57,11 @@ sink:
 ```
 
 yard merges the job with the context from its parent directories and sends
-the result to the plugin. For Glue, the plugin turns it into a PySpark script,
-uploads the script to S3, and creates or updates the Glue job.
+the result to the plugin. The plugin turns it into whatever its target needs,
+typically a generated script that it uploads and a job it creates or updates.
+Anything the plugin needs beyond the job file, such as an execution role or a
+bucket for scripts, is listed in the plugin's documentation and has to exist
+before you apply.
 
 The built-in transforms are `sql`, `filter`, `select`, `rename`,
 `drop_columns`, `add_column`, `join`, `aggregate`, and `window`, plus
@@ -91,8 +93,9 @@ Applying...
 State updated successfully.
 ```
 
-State and locks are kept per job, so two people or two CI runs deploying
-different jobs do not block each other. `--target` limits a run to one job and
+`yard show <job>` prints what the plugin generated, so you can read it before
+it goes anywhere. State and locks are kept per job, so two people or two CI
+runs deploying different jobs do not block each other. `--target` limits a run to one job and
 `--dir` to one directory. `--dry-run` and `--auto-approve` are there for CI.
 
 ## Project layout
@@ -127,9 +130,9 @@ details come from the directories, not from the job file.
 The yard binary has no provider code in it. For each operation it starts the
 plugin binary, writes one JSON request to stdin, reads one JSON response from
 stdout, and the plugin exits. yard handles the rest: reading the config tree,
-working out diffs, locking, and downloading plugin binaries from GitHub
-Releases the first time a job needs them. Their checksums go in `yard.lock`,
-which you commit.
+working out diffs, locking, and downloading plugin binaries from the URL each
+job declares the first time they are needed. Their checksums go in
+`yard.lock`, which you commit.
 
 A plugin implements six operations:
 
@@ -142,18 +145,15 @@ A plugin implements six operations:
 | `verify` | Report whether each recorded resource still exists |
 | `schema` | Describe the config fields the plugin accepts |
 
-Two plugins exist so far, both in the [yard-plugins]({{ site.plugins_url }})
-repository:
-
-| Plugin | Language | What it deploys |
-|--------|----------|-----------------|
-| `yard-plugin-glue` | Rust | AWS Glue ETL jobs. Generates PySpark from the sources, transforms, and sink, uploads it to S3, and creates or updates the Glue job. |
-| `yard-plugin-airflow` | Python | Airflow DAG files uploaded to S3, with schedule, dataset, S3, SQS, and API triggers. |
+Plugins are published and documented separately from yard. Each one says
+which job type it registers, which `providers.<type>` fields it accepts, and
+which credentials and resources it needs. Those docs, not these, are where to
+look for provider specifics.
 
 There is a Rust SDK, `yard-plugin-sdk`, that handles the protocol for you, but
-it is not required. The Airflow plugin is a single Python file with no SDK.
+it is not required; the protocol is small enough to implement in any language.
 [Build a plugin]({% link _plugins/how-to-build-a-plugin.md %}) walks through
-both.
+it in Rust and in Python.
 
 ## CLI
 

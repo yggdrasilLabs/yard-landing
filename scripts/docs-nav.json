@@ -18,10 +18,7 @@
   {
     "collection": "plugins",
     "pages": [
-      "/docs/how-to/build-a-plugin/",
-      "/docs/plugins/example-plugins/",
-      "/docs/reference/providers/glue/",
-      "/docs/reference/providers/emr/"
+      "/docs/how-to/build-a-plugin/"
     ]
   },
   {

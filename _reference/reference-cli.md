@@ -255,8 +255,8 @@ yard validate --dir staging/
 ## See also
 
 - [configuration.md]({% link _reference/reference-configuration.md %}) — YAML schema and environment variables
-- [providers/glue.md]({% link _plugins/reference-providers-glue.md %}) — Glue provider plugin
-- [providers/emr.md]({% link _plugins/reference-providers-emr.md %}) — EMR provider plugin
+- [providers/glue.md](https://github.com/sean-mca/yard/blob/main/docs/reference/providers/glue.md) — Glue provider plugin
+- [providers/emr.md](https://github.com/sean-mca/yard/blob/main/docs/reference/providers/emr.md) — EMR provider plugin
 - [migrations/v2.0.md]({% link _howto/reference-migrations-v2.0.md %}) — v2.0 migration guide
 
 ---

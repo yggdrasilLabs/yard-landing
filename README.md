@@ -46,12 +46,12 @@ domain only requires updating `url` and `baseurl` for local previews.
 
 ### Generated documentation pages
 
-The collections are generated from the `docs/` tree of the yard repository plus
-the yard-plugins README. The generated files are committed, so the site builds
-without the other repositories present.
+The collections are generated from the `docs/` tree of the yard repository.
+The generated files are committed, so the site builds without the yard
+repository present.
 
-To refresh them after the upstream docs change, with `yard` and `yard-plugins`
-checked out as siblings of this folder:
+To refresh them after the upstream docs change, with `yard` checked out as a
+sibling of this folder:
 
 ```sh
 python3 scripts/sync-docs.py

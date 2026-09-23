@@ -6,18 +6,18 @@ order: 3
 source: "https://github.com/sean-mca/yard/blob/main/docs/reference/migrations/v2.0.md"
 ---
 
-v2.0 moves all provider logic out of the yard binary and into plugin binaries. Providers are now separate executables that yard downloads and runs on demand via JSON-over-stdio. The Glue and Airflow plugins live in the [yard-plugins](https://github.com/sean-mca/yard-plugins) repository. This is a breaking change -- existing `job.yaml` files must declare their plugin version and download source.
+v2.0 moves all provider logic out of the yard binary and into plugin binaries. Providers are now separate executables that yard downloads and runs on demand via JSON-over-stdio, each published and documented on its own. This is a breaking change -- existing `job.yaml` files must declare their plugin version and download source.
 
 ## TL;DR breaking changes
 
 | Area | v1.x | v2.0 | Notes |
 |------|------|------|-------|
-| Provider resolution | Compiled-in Glue/EMR/Bash providers | Plugin binaries (`yard-plugin-glue`, `yard-plugin-airflow`) | Plugins ship from the `yard-plugins` repo and release independently of yard |
+| Provider resolution | Compiled-in Glue/EMR/Bash providers | One plugin binary per provider (`yard-plugin-<type>`) | Plugins are published and versioned independently of yard |
 | Job config | `type: glue` (no other fields needed) | `type: glue` + `plugin_version` + `plugin_source` required | Two new required fields per job |
 | First run | `yard plan` just works | `yard plan` auto-downloads plugin binary on first use | Binary cached at `.yard/plugins/` |
 | Validation | Built-in provider config checks | Plugin `schema()` drives validation | Provider-specific field validation moves to the plugin |
 | Codegen | Built-in PySpark generation | Plugin `codegen()` operation | Script generation is provider-specific |
-| DAG generation | Built-in Airflow DAG codegen | Moved to `yard-plugin-airflow` | `yard show dag` no longer available |
+| DAG generation | Built-in Airflow DAG codegen | Removed from core; a provider plugin can generate DAGs | `yard show dag` no longer available |
 | Dependencies | `aws-sdk-glue`, `aws-sdk-emr`, `tera` compiled in | Removed from yard binary | Smaller binary, fewer transitive deps |
 | `yard show dag` | Shows generated DAG Python | Removed | DAG generation is now plugin responsibility |
 
@@ -57,7 +57,7 @@ sink:
 # job.yaml
 type: glue
 plugin_version: "0.1.0"
-plugin_source: "https://github.com/sean-mca/yard-plugins/releases/download/v0.1.0/yard-plugin-glue-0.1.0-aarch64-apple-darwin"
+plugin_source: "https://<plugin-release-url>/yard-plugin-glue-0.1.0-aarch64-macos"
 role: arn:aws:iam::123456789012:role/my-glue-role
 sources:
   - name: orders
@@ -98,13 +98,13 @@ assets must be named to match, or the first `yard plan` 404s.
 > URL for the platform you are on:
 >
 > ```yaml
-> plugin_source: "https://github.com/sean-mca/yard-plugins/releases/download/v0.1.0/yard-plugin-glue-0.1.0-aarch64-apple-darwin"
+> plugin_source: "https://<plugin-release-url>/yard-plugin-glue-0.1.0-aarch64-macos"
 > ```
 >
 > The placeholder expansion itself works correctly once a template reaches the
 > downloader -- it is only the job-file interpolation pass that rejects it.
 
-There is no EMR plugin yet, so `type: emr` jobs cannot be deployed on v2.0 until one is published. See [providers/emr.md]({% link _plugins/reference-providers-emr.md %}).
+Every other job type follows the same pattern with its own plugin's URL. A job type with no published plugin cannot be deployed on v2.0 until one exists.
 
 ### Step 2: First plan/apply
 
@@ -135,7 +135,7 @@ It means one or more job files are missing the `plugin_version` and `plugin_sour
 
 ### Step 4: DAG users
 
-Airflow DAG generation is no longer built into yard and the `yard show dag` command has been removed. DAGs are now produced by `yard-plugin-airflow`, which renders a DAG file and uploads it to S3. It is a job type like any other, with `plugin_version` and `plugin_source` pointing at a [yard-plugins release](https://github.com/sean-mca/yard-plugins/releases). The `airflow:` block that v1.x read from job files is ignored by core now; the plugin's README lists the fields it expects.
+Airflow DAG generation is no longer built into yard and the `yard show dag` command has been removed. DAG generation is a provider plugin's job now: a plugin that targets Airflow is declared on a job like any other plugin, with `plugin_version` and `plugin_source`, and documents the fields it expects. The `airflow:` block that v1.x read from job files is ignored by core.
 
 ### Step 5: Team rollout
 
