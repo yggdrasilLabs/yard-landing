@@ -18,7 +18,7 @@ you at the plugin's documentation.
 If you just want to skim, the shortest possible path is:
 
 ```bash
-brew install sean-mca/yard/yard
+brew install yggdrasilLabs/yard/yard
 mkdir my-project && cd my-project && yard init
 # edit yard.yaml + add one <job>.yaml, then:
 yard validate
@@ -96,7 +96,7 @@ rustc --version   # rustc 1.85 or newer
 Works on macOS and Linux:
 
 ```bash
-brew install sean-mca/yard/yard
+brew install yggdrasilLabs/yard/yard
 ```
 
 Later releases are picked up with `brew upgrade yard`.
